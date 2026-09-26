@@ -1,0 +1,13 @@
+- Project is Starship heat-tile line genealogy / PDR assignment. Deadline was Thu 17 Sep 2026 2:30pm CDT.
+- Conversation snapshot: artifacts/Understanding the Problem - Grok.html
+- Working files: heat-tile-decisions.pptx (decision notes, not the PDR), heat-tile-traceability-pdr.pdf (five-section PDR), heat-tile-line-simulator.html, line-model.js.txt, Starship-Heat-Tiles-PDR-Assignment.pdf
+- Locked: D1 instant well-mix proportional split qty_X = (kg_X / kg_vessel) * kg_leaving. FIFO/LIFO out. Constant-time mix is the unused alternative.
+- Locked: D8 ledger is append-only events (user add, set flow from→to kg/min, stop flow, cast+8kg slice). Do not write 1s add/consume rows. Map updates every sample. Genealogy from map at cast.
+- Locked: two inventories — warehouse (purchased lots, down on user add) vs location mass (tank/tower add/consume). Transfer writes location mass.
+- Locked: D9 live MES state is lotId→kg per vessel. Rate×time is setpoint not measured kg. Cannot rebuild mix from ledger + current total mass only. Snapshot + forward events + measured Δkg. No-save baseline is UNATTRIBUTED: live_kg not empty map.
+- Locked: D10 TANK-B / T2 use net level-mass change minus known adds. Prefer flow meter when it exists. Flow math: mean(lpm)×minutes×1.15. Level outflow is net change minus adds.
+- Locked: D11 taken-down = out of service; freeze that vessel map; observed stop not commanded pump. MES crash ≠ taken-down (pumps keep running).
+- Locked: D12 late scan = kg already in vessel, lotId later. Do not pool UNATTRIBUTED. Each unmatched add is UNATTRIBUTED-n. Append scan-attach, do not edit original add. Rename key on live maps and already-cast tiles that held that placeholder; do not change kg.
+- Locked: D13 tile system of record is relational: tile header + tile_lot lines. Child unit = serialized tile.
+- Scale from spec: ~500 tiles/day, two towers. Not 18k tiles/ship or two lines.
+- Crash restore stays out of PDR body / out of scope to implement. Reviewers read the PDF PDR + simulator, not the deck.

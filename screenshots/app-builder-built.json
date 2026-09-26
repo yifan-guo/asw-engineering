@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Heat Tile Line",
+      "hasCanvas": false,
+      "bodyTextLen": 34,
+      "bodyTextHash": "37872e19b394a918a700f7ff957d0d6dfe519ac2496ac50660c9293471f6aae7",
+      "bodyTextPrefix": "Heat Tile Line genealogy simulator",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Heat Tile Line",
+      "hasCanvas": false,
+      "bodyTextLen": 34,
+      "bodyTextHash": "37872e19b394a918a700f7ff957d0d6dfe519ac2496ac50660c9293471f6aae7",
+      "bodyTextPrefix": "Heat Tile Line genealogy simulator",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}

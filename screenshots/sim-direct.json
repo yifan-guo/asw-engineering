@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/heat-tile-line-simulator.html",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Heat Tile Line — Genealogy Simulator",
+      "hasCanvas": false,
+      "bodyTextLen": 2304,
+      "bodyTextHash": "742824c858a5f6d07360c44fe5bf9e30ce58d35436223bccda98a86a65705478",
+      "bodyTextPrefix": "Heat Tile Line Two mix tanks feed two cast towers. Genealogy is ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/sim-direct.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Heat Tile Line — Genealogy Simulator",
+      "hasCanvas": false,
+      "bodyTextLen": 2304,
+      "bodyTextHash": "742824c858a5f6d07360c44fe5bf9e30ce58d35436223bccda98a86a65705478",
+      "bodyTextPrefix": "Heat Tile Line Two mix tanks feed two cast towers. Genealogy is ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/sim-direct-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/sim-direct.json"
+}
