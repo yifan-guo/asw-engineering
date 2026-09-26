@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heat Tile Line — Genealogy Simulator</title>
+<style>
+:root{
+  --bg:#0c0d10; --elev:#14151a; --elev2:#1b1d24; --elev3:#22242c;
+  --fg:#ececec; --muted:#9aa0ab; --subtle:#6b7280;
+  --line:rgba(236,236,236,.12); --line-strong:rgba(236,236,236,.22);
+  --accent:#8fa3b8; --sand:#c4b8a1;
+  --ok:#6fbf7b; --warn:#d4a24c; --bad:#dd6459;
+  --r-xs:4px; --r-sm:8px; --r-md:12px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px;
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --motion-quick:150ms; --motion-fast:250ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5;}
+button,input,select{font:inherit;}
+button{cursor:pointer;}
+button:disabled,input:disabled,select:disabled{opacity:.4;cursor:not-allowed;}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+input,select{
+  background:var(--elev3);border:1px solid var(--line-strong);color:var(--fg);
+  border-radius:var(--r-xs);padding:8px 10px;min-height:40px;
+  font-family:var(--mono);font-size:12px;
+}
+.btn{
+  background:var(--elev3);border:1px solid var(--line-strong);color:var(--fg);
+  border-radius:var(--r-xs);padding:8px 12px;min-height:40px;font-size:12px;font-weight:500;
+  transition:border-color var(--motion-quick) var(--ease), background var(--motion-quick) var(--ease);
+}
+.btn:hover:not(:disabled){border-color:var(--accent);}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg);}
+.btn.primary:hover:not(:disabled){opacity:.92;}
+.btn.warn{border-color:color-mix(in srgb, var(--warn) 50%, var(--line-strong)); color:var(--warn);}
+.btn.ghost{background:transparent;}
+.btn.icon{width:40px;padding:0;font-size:18px;line-height:1;color:var(--accent);}
+.wrap{max-width:1480px;margin:0 auto;padding:16px 16px 40px;}
+header.app{
+  display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:flex-start;
+  padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:16px;
+}
+h1{margin:0 0 4px;font-size:20px;font-weight:600;letter-spacing:-.02em;}
+.sub{color:var(--muted);font-size:13px;max-width:640px;}
+.tag{
+  display:inline-block;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--sand);
+  border:1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+  padding:3px 8px;border-radius:2px;
+}
+.clock{
+  display:flex;gap:12px;align-items:center;background:var(--elev);
+  border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;
+}
+.time{font-family:var(--mono);font-size:22px;letter-spacing:1px;color:var(--accent);font-variant-numeric:tabular-nums;}
+.clock-btns{display:flex;flex-wrap:wrap;gap:6px;}
+.speed{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+.speed input[type=range]{width:90px;}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+.toggle input{min-height:0;width:16px;height:16px;accent-color:var(--accent);}
+.banner{
+  display:none;margin-bottom:12px;padding:10px 12px;border-radius:var(--r-sm);
+  border:1px solid color-mix(in srgb, var(--warn) 40%, var(--line));
+  background:color-mix(in srgb, var(--warn) 10%, var(--elev)); color:var(--warn);
+  font-family:var(--mono);font-size:12px;
+}
+.banner.on{display:block;}
+.flash-bar{
+  min-height:28px;margin-bottom:12px;font-size:12px;color:var(--sand);
+  font-family:var(--mono);
+}
+.line-grid{
+  display:grid;grid-template-columns:1fr 140px 1fr 300px;gap:12px;align-items:stretch;
+}
+@media (max-width:1100px){
+  .line-grid{grid-template-columns:1fr 1fr;}
+  .pipes{grid-column:1/-1;height:80px;}
+  .tile-panel{grid-column:1/-1;}
+}
+@media (max-width:720px){
+  .line-grid{grid-template-columns:1fr;}
+}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0;}
+.panel{
+  background:var(--elev);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;
+}
+.panel.hit{box-shadow:0 0 0 1px var(--accent);}
+.panel h2{
+  margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--subtle);font-weight:600;
+}
+.vessel{
+  background:var(--elev2);border:1px solid var(--line-strong);border-radius:var(--r-sm);
+  padding:12px;position:relative;min-width:0;
+  transition:opacity var(--motion-fast) var(--ease), filter var(--motion-fast) var(--ease);
+}
+.vessel.down{opacity:.42;filter:grayscale(.8);}
+.vessel.hit{box-shadow:inset 0 0 0 1px var(--accent);}
+.v-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+.v-name{font-weight:600;}
+.v-status{font-family:var(--mono);font-size:10px;}
+.v-status.on{color:var(--ok);} .v-status.off{color:var(--bad);}
+.plc{font-family:var(--mono);font-size:10px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+.plc b{color:var(--fg);font-weight:500;}
+.mix{
+  height:16px;border-radius:2px;overflow:hidden;display:flex;background:var(--elev3);
+  border:1px solid var(--line);margin-bottom:8px;
+}
+.mix span{display:block;height:100%;}
+.mass{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px;}
+.mass b{color:var(--fg);}
+.map{list-style:none;margin:0 0 8px;padding:0;font-family:var(--mono);font-size:11px;}
+.map li{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);}
+.map .id{color:var(--fg);}
+.map .unatt{color:var(--subtle);font-style:italic;}
+.ops{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;}
+.ops .grow{flex:1;min-width:72px;}
+.pipes{position:relative;min-height:220px;}
+.pipes svg{width:100%;height:100%;display:block;}
+.slice-tip{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:var(--elev3);border:1px solid var(--line-strong);border-radius:var(--r-xs);
+  padding:8px 10px;font-family:var(--mono);font-size:10px;color:var(--muted);
+  pointer-events:none;min-width:140px;display:none;z-index:2;
+}
+.pipes:hover .slice-tip.has{display:block;}
+.tile-panel{background:var(--elev);border:1px solid var(--line);border-radius:var(--r-md);padding:14px;min-height:220px;}
+.tile-serial{font-family:var(--mono);color:var(--sand);font-weight:600;}
+.tile-meta{font-size:12px;color:var(--subtle);margin:2px 0 10px;}
+.tile-lots{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:12px;}
+.tile-lots li{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);}
+.empty{color:var(--subtle);font-size:13px;}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin:0 0 12px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle;}
+.tables{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-top:12px;}
+@media (max-width:980px){ .tables{grid-template-columns:1fr;} }
+.scroll{max-height:260px;overflow:auto;}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;}
+th{text-align:left;color:var(--subtle);font-weight:500;padding:6px 6px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--elev);}
+td{padding:6px;border-bottom:1px solid var(--line);vertical-align:top;}
+tr.sel{background:color-mix(in srgb, var(--accent) 10%, transparent);cursor:pointer;}
+tr.click{cursor:pointer;}
+tr.click:hover{background:var(--elev2);}
+.kind-add{color:var(--ok);} .kind-cast{color:var(--sand);}
+.kind-set_flow,.kind-stop_flow,.kind-observed_stop{color:var(--accent);}
+.kind-scan_attach{color:var(--warn);} .kind-alert,.kind-empty,.kind-capacity_reached{color:var(--bad);}
+.pop{
+  position:absolute;z-index:20;background:var(--elev3);border:1px solid var(--line-strong);
+  border-radius:var(--r-sm);padding:12px;width:min(280px,calc(100vw - 24px));
+  box-shadow:0 12px 40px rgba(0,0,0,.4);display:none;
+}
+.pop.on{display:block;}
+.pop label{display:block;font-size:11px;color:var(--subtle);margin:8px 0 4px;}
+.pop .row{display:flex;gap:6px;align-items:center;margin-top:8px;}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;}
+.tile-card{background:var(--elev2);border:1px solid var(--line);border-radius:var(--r-xs);padding:10px;cursor:pointer;}
+.tile-card:hover,.tile-card.sel{border-color:var(--accent);}
+footer{margin-top:20px;padding-top:12px;border-top:1px solid var(--line);color:var(--subtle);font-size:11px;}
+@media (prefers-reduced-motion:reduce){
+  .btn,.vessel,.panel{transition:none;}
+  .flow-dash{animation:none !important;}
+}
+@keyframes dashmove{to{stroke-dashoffset:-22;}}
+.flow-dash{animation:dashmove 1s linear infinite;}
+.hatch{background-image:repeating-linear-gradient(45deg, #4b5060 0 4px, #2a2d36 4px 8px);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <div>
+      <h1>Heat Tile Line</h1>
+      <div class="sub">Two mix tanks feed two cast towers. Genealogy is the 8 kg slice of the tower map at TILE_STAMP — every parent lot and its kilograms.</div>
+      <div class="tag">D1 well-mixed instantly · qty_X = (kg_X / kg_vessel) × kg_leaving</div>
+    </div>
+    <div class="clock">
+      <div>
+        <div class="time" id="clock">08:00:00</div>
+        <div class="speed">
+          <span>speed</span>
+          <input type="range" id="speed" min="1" max="60" value="12">
+          <span id="speedLbl">12×</span>
+        </div>
+        <label class="toggle" style="margin-top:8px;">
+          <input type="checkbox" id="disagree">
+          simulate meter / level disagree
+        </label>
+      </div>
+      <div class="clock-btns">
+        <button class="btn primary" id="playBtn" type="button">Play</button>
+        <button class="btn" id="stepBtn" type="button">Step +1m</button>
+        <button class="btn" id="exampleBtn" type="button">Load example</button>
+        <button class="btn" id="snapBtn" type="button">Snapshot maps</button>
+        <button class="btn" id="resetBtn" type="button">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="banner" id="alertBanner"></div>
+  <div class="flash-bar" id="flashBar">Operator actions write the ledger. Genealogy is read from the vessel map at cast.</div>
+  <div class="legend" id="legend"></div>
+
+  <div class="line-grid">
+    <div class="col" id="tankCol"></div>
+    <div class="pipes" id="pipes">
+      <svg id="flowSvg" viewBox="0 0 140 220" preserveAspectRatio="none"></svg>
+      <div class="slice-tip" id="sliceTip"></div>
+    </div>
+    <div class="col" id="towerCol"></div>
+    <aside class="tile-panel" id="tilePanel">
+      <h2>Selected tile</h2>
+      <div id="tileDetail"><div class="empty">Cast a tile, or pick one from the table. This panel is the genealogy report: every parent lot and its quantity.</div></div>
+    </aside>
+  </div>
+
+  <div class="tables">
+    <div class="panel" id="whPanel">
+      <h2>Warehouse inventory — purchased lots</h2>
+      <div class="ops" style="margin-bottom:8px;">
+        <input id="whLot" placeholder="lotId e.g. FIB-010" style="flex:1;min-width:100px;">
+        <input id="whKg" type="number" value="40" min="0.1" step="0.1" style="width:88px;">
+        <button class="btn" type="button" id="whReceive">Receive</button>
+      </div>
+      <div class="scroll"><table><thead><tr><th>lotId</th><th>received</th><th>remaining</th></tr></thead><tbody id="whBody"></tbody></table></div>
+    </div>
+    <div class="panel" id="mesPanel">
+      <h2>MES maps — lotId → kg (live)</h2>
+      <div class="scroll" id="mesTables"></div>
+    </div>
+  </div>
+
+  <div class="tables">
+    <div class="panel" id="ledgerPanel">
+      <h2>Ledger — append-only events</h2>
+      <div class="scroll"><table><thead><tr><th>t</th><th>kind</th><th>detail</th></tr></thead><tbody id="ledgerBody"></tbody></table></div>
+    </div>
+    <div class="panel" id="snapPanel">
+      <h2>MES map backups</h2>
+      <div class="scroll"><table><thead><tr><th>t</th><th>reason</th><th>maps</th></tr></thead><tbody id="snapBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="tables">
+    <div class="panel" id="tileTablePanel">
+      <h2>Tile table — header + tile_lot rows</h2>
+      <div class="scroll"><table><thead><tr><th>serial</th><th>tower</th><th>t</th><th>kg</th><th>lot_id</th><th>lot_kg</th></tr></thead><tbody id="tileBody"></tbody></table></div>
+      <div class="gallery" id="gallery" style="margin-top:10px;"></div>
+    </div>
+    <div class="panel" id="plcPanel">
+      <h2>PLC sensors</h2>
+      <div class="scroll"><table><thead><tr><th>tag</th><th>TANK-A</th><th>TANK-B</th><th>TOWER-1</th><th>TOWER-2</th></tr></thead><tbody id="plcBody"></tbody></table></div>
+      <p class="empty" style="margin:8px 0 0;">TANK-A / TOWER-1 have flow meters. TANK-B / TOWER-2 do not — Δkg is net level-mass change minus known adds. Prefer the meter when it exists. Alert if |meter − level| exceeds 5% or 2 kg, whichever larger. Do not average them.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:12px;" id="latePanel">
+    <h2>Late scan — attach a lotId to UNATTRIBUTED-n</h2>
+    <div id="lateList" class="empty">No unmatched adds. An unspecified add creates its own UNATTRIBUTED-n (do not pool).</div>
+  </div>
+
+  <footer>
+    Self-contained line simulation. Ledger stores events; genealogy comes from the map at cast. line-model.js is unmodified (mass and capacity only). Density 1.15 kg/L. Cast 8 kg. Offline, no network.
+  </footer>
+</div>
+
+<div class="pop" id="addPop">
+  <strong style="font-size:12px;">Add to <span id="popLoc"></span></strong>
+  <label>material</label>
+  <select id="popMat"></select>
+  <label>kg</label>
+  <input id="popKg" type="number" value="10" min="0.1" step="0.1">
+  <label>lotId (blank = unspecified)</label>
+  <input id="popLot" placeholder="leave blank for UNATTRIBUTED-n">
+  <label class="toggle"><input type="checkbox" id="popUnspec"> unspecified lot (late scan later)</label>
+  <div class="row">
+    <button class="btn primary" type="button" id="popAdd">Add</button>
+    <button class="btn ghost" type="button" id="popCancel">Cancel</button>
+  </div>
+</div>
+
+<script>
+/* line-model.js — copied verbatim, unmodified */
+(function (global) {
+  "use strict";
+  var MATERIALS = {
+    fiber: { id: "fiber", name: "Fiber", prefix: "FIB", stage: 1 },
+    acetic_acid: { id: "acetic_acid", name: "Acetic acid", prefix: "ACE", stage: 1 },
+    nickel_shards: { id: "nickel_shards", name: "Nickel shards", prefix: "NI", stage: 2 },
+    hydrogen_peroxide: { id: "hydrogen_peroxide", name: "Hydrogen peroxide", prefix: "HP", stage: 2 },
+  };
+  var LOC = { TANK_A: "LOC-TANK-A", TANK_B: "LOC-TANK-B", TOWER_1: "LOC-TOWER-1", TOWER_2: "LOC-TOWER-2" };
+  function Asset(opts) { this.id = opts.id; this.type = opts.type; this.name = opts.name; this.inService = true; }
+  function Location(opts) { this.id = opts.id; this.name = opts.name; this.asset = opts.asset; this.capacityKg = opts.capacityKg; this._massKg = 0; }
+  Object.defineProperty(Location.prototype, "massKg", { get: function () { return this._massKg; } });
+  Object.defineProperty(Location.prototype, "headroomKg", { get: function () { return Math.max(0, this.capacityKg - this._massKg); } });
+  Object.defineProperty(Location.prototype, "inService", { get: function () { return this.asset.inService; } });
+  function Inventory(locations) {
+    this._locations = {};
+    for (var i = 0; i < locations.length; i++) this._locations[locations[i].id] = locations[i];
+    this._listeners = [];
+  }
+  Inventory.prototype.location = function (id) { return this._locations[id] || null; };
+  Inventory.prototype.locations = function () {
+    var out = [];
+    for (var id in this._locations) if (Object.prototype.hasOwnProperty.call(this._locations, id)) out.push(this._locations[id]);
+    return out;
+  };
+  Inventory.prototype.subscribe = function (fn) { this._listeners.push(fn); };
+  Inventory.prototype._emit = function (event) {
+    for (var i = 0; i < this._listeners.length; i++) this._listeners[i](event);
+    return { ok: true, event: event };
+  };
+  Inventory.prototype.add = function (locationId, spec) {
+    var loc = this.location(locationId);
+    if (!loc) return { ok: false, error: "Unknown location." };
+    if (!loc.inService) return { ok: false, error: loc.name + " is down." };
+    var qty = Number(spec && spec.quantityKg);
+    if (!(qty > 0)) return { ok: false, error: "Quantity must be positive." };
+    if (qty > loc.headroomKg + 1e-9) return { ok: false, error: "Not enough headroom (" + loc.headroomKg.toFixed(1) + " kg free)." };
+    loc._massKg += qty;
+    return this._emit({ type: "add", locationId: locationId, lotId: (spec && spec.lotId) || null, sourceLocationId: (spec && spec.sourceLocationId) || null, quantityKg: qty, timestamp: spec && spec.timestamp, massKg: loc._massKg });
+  };
+  Inventory.prototype.consume = function (locationId, spec) {
+    var loc = this.location(locationId);
+    if (!loc) return { ok: false, error: "Unknown location." };
+    if (!loc.inService) return { ok: false, error: loc.name + " is down." };
+    var qty = Number(spec && spec.quantityKg);
+    if (!(qty > 0)) return { ok: false, error: "Quantity must be positive." };
+    if (qty > loc.massKg + 1e-9) return { ok: false, error: "Not enough mass (" + loc.massKg.toFixed(2) + " kg on hand)." };
+    loc._massKg -= qty;
+    if (loc._massKg < 1e-12) loc._massKg = 0;
+    return this._emit({ type: "consume", locationId: locationId, quantityKg: qty, timestamp: spec && spec.timestamp, massKg: loc._massKg });
+  };
+  function createLine() {
+    var tankA = new Asset({ id: "ASSET-TANK-A", type: "tank", name: "Stage 1 tank A" });
+    var tankB = new Asset({ id: "ASSET-TANK-B", type: "tank", name: "Stage 1 tank B" });
+    var tower1 = new Asset({ id: "ASSET-TOWER-1", type: "tower", name: "Tower 1" });
+    var tower2 = new Asset({ id: "ASSET-TOWER-2", type: "tower", name: "Tower 2" });
+    return new Inventory([
+      new Location({ id: LOC.TANK_A, name: "TANK-A", asset: tankA, capacityKg: 400 }),
+      new Location({ id: LOC.TANK_B, name: "TANK-B", asset: tankB, capacityKg: 400 }),
+      new Location({ id: LOC.TOWER_1, name: "TOWER-1", asset: tower1, capacityKg: 80 }),
+      new Location({ id: LOC.TOWER_2, name: "TOWER-2", asset: tower2, capacityKg: 80 }),
+    ]);
+  }
+  global.LineModel = { MATERIALS: MATERIALS, LOC: LOC, Asset: Asset, Location: Location, Inventory: Inventory, createLine: createLine };
+})(typeof window !== "undefined" ? window : globalThis);
+
+(function () {
+  "use strict";
+  var LOC = LineModel.LOC;
+  var MATERIALS = LineModel.MATERIALS;
+  var DENSITY = 1.15;
+  var CAST_KG = 8;
+  var DUST = 1e-6;
+  var LEVEL_BIAS = 0.12;
+
+  var VESSELS = [
+    { id: LOC.TANK_A, kind: "tank", label: "TANK-A", inputs: ["fiber", "acetic_acid"], hasOutletMeter: true, hasInletMeter: false, full: 400 },
+    { id: LOC.TANK_B, kind: "tank", label: "TANK-B", inputs: ["fiber", "acetic_acid"], hasOutletMeter: false, hasInletMeter: false, full: 400 },
+    { id: LOC.TOWER_1, kind: "tower", label: "TOWER-1", inputs: ["nickel_shards", "hydrogen_peroxide"], hasOutletMeter: false, hasInletMeter: true, full: 80 },
+    { id: LOC.TOWER_2, kind: "tower", label: "TOWER-2", inputs: ["nickel_shards", "hydrogen_peroxide"], hasOutletMeter: false, hasInletMeter: false, full: 80 },
+  ];
+  var TANK_IDS = [LOC.TANK_A, LOC.TANK_B];
+  var TOWER_IDS = [LOC.TOWER_1, LOC.TOWER_2];
+  var PALETTE = ["#7aa2c8", "#c17f59", "#6a9e78", "#b7799a", "#c9b07a", "#6e8b9c", "#9b6b6b", "#7d8f69", "#8b7ec8", "#5e9a8a"];
+
+  var inventory, mes, warehouse, ledger, tiles, snapshots, alerts;
+  var flows, clock, running, tickHandle, example, unattrSeq, tileCounter, lotCounters;
+  var lastSlice, selectedSerial, built, lastSnapAt, flashText, lineBound;
+  var addTarget = null;
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, "\u0026amp;")
+      .replace(/</g, "\u0026lt;")
+      .replace(/>/g, "\u0026gt;")
+      .replace(/"/g, "\u0026quot;")
+      .replace(/'/g, "\u0026#39;");
+  }
+  function fmt(n, d) { d = d === undefined ? 2 : d; return Number(n).toFixed(d); }
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function clockStr(sec) {
+    var h = 8 + Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = Math.floor(sec % 60);
+    return pad2(h) + ":" + pad2(m) + ":" + pad2(s);
+  }
+  function vesselOf(id) {
+    for (var i = 0; i < VESSELS.length; i++) if (VESSELS[i].id === id) return VESSELS[i];
+    return null;
+  }
+  function lotColor(id) {
+    if (String(id).indexOf("UNATTRIBUTED") === 0) return "#5c6370";
+    var h = 0;
+    for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    return PALETTE[h % PALETTE.length];
+  }
+  function mapTotal(id) {
+    var lots = mes[id].lots, s = 0, k;
+    for (k in lots) if (Object.prototype.hasOwnProperty.call(lots, k)) s += lots[k];
+    return s;
+  }
+  function d1Slice(id, qty) {
+    var lots = mes[id].lots;
+    var keys = Object.keys(lots);
+    var total = mapTotal(id);
+    var slice = [];
+    if (total <= DUST || qty <= 0 || keys.length === 0) return slice;
+    var taken = 0;
+    keys.forEach(function (lotId, i) {
+      var take = i === keys.length - 1 ? qty - taken : (lots[lotId] / total) * qty;
+      take = Math.max(0, Math.min(lots[lotId], take));
+      if (take > DUST) { slice.push({ lotId: lotId, kg: take }); taken += take; }
+    });
+    return slice;
+  }
+  function applyOut(id, slice) {
+    slice.forEach(function (s) {
+      mes[id].lots[s.lotId] -= s.kg;
+      if (mes[id].lots[s.lotId] < DUST) delete mes[id].lots[s.lotId];
+    });
+  }
+  function applyIn(id, slice) {
+    slice.forEach(function (s) {
+      mes[id].lots[s.lotId] = (mes[id].lots[s.lotId] || 0) + s.kg;
+    });
+  }
+  function hit(ids, text) {
+    flashText = clockStr(clock) + "  " + text;
+    ids.forEach(function (id) {
+      var el = document.getElementById("card-" + id) || document.getElementById(id);
+      if (el) {
+        el.classList.remove("hit");
+        void el.offsetWidth;
+        el.classList.add("hit");
+        setTimeout(function () { el.classList.remove("hit"); }, 700);
+      }
+    });
+  }
+  function writeLedger(kind, detail, payload) {
+    ledger.push({ t: clockStr(clock), kind: kind, detail: detail, payload: payload || null });
+    snapshot("ledger:" + kind);
+  }
+  function snapshot(reason) {
+    var maps = {};
+    VESSELS.forEach(function (v) {
+      var copy = {};
+      for (var k in mes[v.id].lots) copy[k] = +mes[v.id].lots[k].toFixed(4);
+      maps[v.label] = copy;
+    });
+    snapshots.push({ t: clockStr(clock), reason: reason, maps: maps });
+    lastSnapAt = clock;
+  }
+  function seedWarehouse() {
+    warehouse = [
+      { lotId: "FIB-001", received: 40, remaining: 40 },
+      { lotId: "ACE-001", received: 15, remaining: 15 },
+      { lotId: "FIB-002", received: 40, remaining: 40 },
+      { lotId: "ACE-002", received: 15, remaining: 15 },
+      { lotId: "NI-001", received: 2, remaining: 2 },
+      { lotId: "HP-001", received: 5, remaining: 5 },
+      { lotId: "NI-002", received: 2, remaining: 2 },
+      { lotId: "HP-002", received: 5, remaining: 5 },
+    ];
+  }
+  function whFind(lotId) {
+    for (var i = 0; i < warehouse.length; i++) if (warehouse[i].lotId === lotId) return warehouse[i];
+    return null;
+  }
+  function issueWarehouse(lotId, qty) {
+    var row = whFind(lotId);
+    if (!row) {
+      warehouse.push({ lotId: lotId, received: qty, remaining: 0 });
+      return true;
+    }
+    if (row.remaining + 1e-9 < qty) return false;
+    row.remaining -= qty;
+    if (row.remaining < DUST) row.remaining = 0;
+    return true;
+  }
+
+  function plcRead(v) {
+    var loc = inventory.location(v.id);
+    var trueLevel = loc.capacityKg > 0 ? (loc.massKg / loc.capacityKg) * 100 : 0;
+    var f = v.kind === "tank" ? flows[v.id] : null;
+    var trueKgMin = f && f.to && f.rate > 0 && loc.inService && inventory.location(f.to).inService ? f.rate : 0;
+    var trueLpm = trueKgMin / DENSITY;
+    var disagree = document.getElementById("disagree").checked;
+    var levelPct = trueLevel;
+    var outletLpm = v.hasOutletMeter ? trueLpm : null;
+    var inletLpm = v.hasInletMeter ? null : null;
+    if (v.kind === "tower") {
+      var incoming = 0;
+      TANK_IDS.forEach(function (tid) {
+        if (flows[tid].to === v.id && flows[tid].rate > 0) incoming += flows[tid].rate;
+      });
+      inletLpm = v.hasInletMeter ? incoming / DENSITY : null;
+    }
+    if (disagree && (v.hasOutletMeter || v.hasInletMeter)) levelPct = Math.min(100, trueLevel * (1 + LEVEL_BIAS));
+    var levelKg = (levelPct / 100) * v.full;
+    return { trueLevel: trueLevel, levelPct: levelPct, levelKg: levelKg, outletLpm: outletLpm, inletLpm: inletLpm, trueKgMin: trueKgMin };
+  }
+
+  function measuredOutKg(v, dtSec) {
+    var dtMin = dtSec / 60;
+    var plc = plcRead(v);
+    if (v.hasOutletMeter && plc.outletLpm != null) return plc.outletLpm * dtMin * DENSITY;
+    return plc.trueKgMin * dtMin;
+  }
+
+  function checkDisagree(v, meterKg, levelOut) {
+    if (!v.hasOutletMeter && !v.hasInletMeter) return;
+    if (!document.getElementById("disagree").checked || meterKg <= DUST) {
+      mes[v.id].estimated = false;
+      return;
+    }
+    var rel = Math.abs(meterKg - levelOut) / meterKg;
+    if (rel > 0.05) {
+      var msg = v.label + " meter vs level disagree " + fmt(rel * 100, 1) + "% (meter " + fmt(meterKg) + " kg, level " + fmt(levelOut) + " kg). Prefer the flow meter. Flag estimated.";
+      if (!mes[v.id].estimated) {
+        alerts.push({ t: clockStr(clock), msg: msg });
+        writeLedger("alert", msg);
+      }
+      mes[v.id].estimated = true;
+    }
+  }
+
+  function doAdd(locId, qty, lotId, unspecified) {
+    var v = vesselOf(locId);
+    var loc = inventory.location(locId);
+    if (!loc.inService) { writeLedger("alert", v.label + " is taken down — add rejected"); render(); return false; }
+    var id = lotId;
+    if (unspecified || !id) {
+      unattrSeq += 1;
+      id = "UNATTRIBUTED-" + unattrSeq;
+    } else if (!issueWarehouse(id, qty)) {
+      writeLedger("alert", "ADD rejected: warehouse remaining for " + id + " is short");
+      render();
+      return false;
+    }
+    var res = inventory.add(locId, { quantityKg: qty, lotId: unspecified ? null : id, timestamp: clock });
+    if (!res.ok) {
+      if (!unspecified && id.indexOf("UNATTRIBUTED") !== 0) {
+        var row = whFind(id);
+        if (row) row.remaining += qty;
+      }
+      writeLedger("alert", "ADD failed at " + v.label + ": " + res.error);
+      render();
+      return false;
+    }
+    mes[locId].lots[id] = (mes[locId].lots[id] || 0) + qty;
+    writeLedger("add", v.label + " + " + fmt(qty) + " kg " + id, { loc: locId, lotId: id, kg: qty });
+    hit(["card-" + locId, "whPanel", "ledgerPanel", "mesPanel"], "ADD → " + v.label + " map, warehouse, ledger");
+    render();
+    return true;
+  }
+
+  function stopFlow(tankId, observed, why) {
+    var f = flows[tankId];
+    if (!f.to && f.rate === 0) return;
+    var from = vesselOf(tankId).label;
+    var to = f.to ? vesselOf(f.to).label : "";
+    var kind = observed ? "observed_stop" : "stop_flow";
+    writeLedger(kind, from + (to ? " → " + to : "") + " stop" + (why ? " (" + why + ")" : "") + ". MES does not command the pump.");
+    f.to = null;
+    f.rate = 0;
+    var destSel = document.getElementById("dest-" + tankId);
+    var rateIn = document.getElementById("rate-" + tankId);
+    if (destSel) destSel.value = "";
+    if (rateIn) rateIn.value = "0";
+  }
+
+  function doTransfer(fromId, toId, qty) {
+    var from = inventory.location(fromId), to = inventory.location(toId);
+    if (!from.inService || !to.inService) return 0;
+    qty = Math.min(qty, from.massKg, to.headroomKg);
+    if (qty <= DUST) return 0;
+    var slice = d1Slice(fromId, qty);
+    var c = inventory.consume(fromId, { quantityKg: qty, timestamp: clock });
+    if (!c.ok) return 0;
+    var a = inventory.add(toId, { quantityKg: qty, sourceLocationId: fromId, timestamp: clock });
+    if (!a.ok) return 0;
+    applyOut(fromId, slice);
+    applyIn(toId, slice);
+    lastSlice = { from: fromId, to: toId, kg: qty, lots: slice };
+    return qty;
+  }
+
+  function flowTick(dtSec) {
+    TANK_IDS.forEach(function (tankId) {
+      var f = flows[tankId];
+      if (!f.to || f.rate <= 0) return;
+      var tank = inventory.location(tankId);
+      var tower = inventory.location(f.to);
+      var tv = vesselOf(tankId);
+      if (!tank.inService || !tower.inService) {
+        stopFlow(tankId, true, "asset taken down");
+        return;
+      }
+      if (tank.massKg <= DUST) {
+        writeLedger("empty", tv.label + " hit zero");
+        stopFlow(tankId, true, "flow depleted capacity");
+        return;
+      }
+      if (tower.headroomKg <= DUST) {
+        writeLedger("capacity_reached", vesselOf(f.to).label + " at capacity");
+        stopFlow(tankId, true, "capacity reached");
+        return;
+      }
+      var qty = measuredOutKg(tv, dtSec);
+      var before = plcRead(tv).levelKg;
+      var moved = doTransfer(tankId, f.to, qty);
+      var after = plcRead(tv).levelKg;
+      var levelOut = before - after;
+      if (levelOut < 0) levelOut = 0;
+      if (moved > 0) {
+        checkDisagree(tv, moved, levelOut);
+        hit(["card-" + tankId, "card-" + f.to, "pipes"], "TRANSFER slice " + fmt(moved) + " kg " + tv.label + " → " + vesselOf(f.to).label + " (map only, not a ledger row)");
+      }
+    });
+  }
+
+  function doCast(towerId, qty, serial) {
+    var v = vesselOf(towerId);
+    var loc = inventory.location(towerId);
+    if (!loc.inService) { writeLedger("alert", "CAST failed: " + v.label + " taken down"); render(); return; }
+    qty = qty || CAST_KG;
+    if (qty > loc.massKg + 1e-9) { writeLedger("alert", "CAST failed: only " + fmt(loc.massKg) + " kg on " + v.label); render(); return; }
+    var slice = d1Slice(towerId, qty);
+    var res = inventory.consume(towerId, { quantityKg: qty, timestamp: clock });
+    if (!res.ok) { writeLedger("alert", "CAST failed: " + res.error); render(); return; }
+    applyOut(towerId, slice);
+    var tile = {
+      serial: serial,
+      tower: v.label,
+      t: clockStr(clock),
+      kg: qty,
+      lots: slice.map(function (s) { return { lotId: s.lotId, kg: s.kg }; }),
+      estimated: mes[towerId].estimated,
+    };
+    tiles.push(tile);
+    selectedSerial = serial;
+    var parts = slice.map(function (s) { return s.lotId + " " + fmt(s.kg) + " kg"; }).join("; ");
+    writeLedger("cast", "TILE_STAMP " + serial + " from " + v.label + " " + fmt(qty) + " kg · " + parts);
+    hit(["card-" + towerId, "tileTablePanel", "tilePanel", "ledgerPanel"], "CAST → tile_lot rows, " + v.label + " map, ledger");
+    render();
+  }
+
+  function scanAttach(placeholder, lotId) {
+    lotId = String(lotId || "").trim();
+    if (!lotId || !placeholder) return;
+    VESSELS.forEach(function (v) {
+      if (mes[v.id].lots[placeholder] != null) {
+        mes[v.id].lots[lotId] = (mes[v.id].lots[lotId] || 0) + mes[v.id].lots[placeholder];
+        delete mes[v.id].lots[placeholder];
+      }
+    });
+    tiles.forEach(function (tile) {
+      tile.lots.forEach(function (row) {
+        if (row.lotId === placeholder) row.lotId = lotId;
+      });
+    });
+    writeLedger("scan_attach", placeholder + " → " + lotId + " (append-only; original add not edited)");
+    hit(["latePanel", "mesPanel", "tileTablePanel", "ledgerPanel"], "SCAN-ATTACH → maps and tiles that still hold " + placeholder);
+    render();
+  }
+
+  function setService(id, on) {
+    var loc = inventory.location(id);
+    var v = vesselOf(id);
+    loc.asset.inService = on;
+    if (!on) {
+      if (v.kind === "tank") stopFlow(id, true, "taken down");
+      TANK_IDS.forEach(function (tid) {
+        if (flows[tid].to === id) stopFlow(tid, true, "destination taken down");
+      });
+      writeLedger("observed_stop", v.label + " taken down. Map frozen. Other in-service vessels still run.");
+    } else {
+      writeLedger("stop_flow", v.label + " back in service (map unchanged)");
+    }
+    hit(["card-" + id], v.label + (on ? " online" : " grayed / taken down"));
+    render();
+  }
+
+  function startFlow(tankId) {
+    var destSel = document.getElementById("dest-" + tankId);
+    var rateIn = document.getElementById("rate-" + tankId);
+    var to = destSel.value;
+    var rate = parseFloat(rateIn.value) || 0;
+    var loc = inventory.location(tankId);
+    if (!loc.inService) return;
+    if (!to || rate <= 0) {
+      if (flows[tankId].to) stopFlow(tankId, false, "operator");
+      render();
+      return;
+    }
+    if (!inventory.location(to).inService) {
+      writeLedger("alert", vesselOf(to).label + " is taken down");
+      render();
+      return;
+    }
+    flows[tankId] = { to: to, rate: rate };
+    writeLedger("set_flow", vesselOf(tankId).label + " → " + vesselOf(to).label + " " + rate + " kg/min (setpoint, not proof of kg)");
+    hit(["card-" + tankId, "card-" + to, "pipes", "ledgerPanel"], "SET FLOW (command). Samples update the map; no 1s ledger rows.");
+    render();
+  }
+
+  function resetState() {
+    inventory = LineModel.createLine();
+    mes = {};
+    VESSELS.forEach(function (v) {
+      mes[v.id] = { lots: {}, estimated: false };
+    });
+    seedWarehouse();
+    ledger = [];
+    tiles = [];
+    snapshots = [];
+    alerts = [];
+    flows = {};
+    TANK_IDS.forEach(function (id) { flows[id] = { to: null, rate: 0 }; });
+    clock = 0;
+    running = false;
+    example = null;
+    unattrSeq = 0;
+    tileCounter = 0;
+    lotCounters = { FIB: 0, ACE: 0, NI: 0, HP: 0 };
+    lastSlice = null;
+    selectedSerial = null;
+    lastSnapAt = 0;
+    flashText = "Operator actions write the ledger. Genealogy is read from the vessel map at cast.";
+    document.getElementById("playBtn").textContent = "Play";
+    snapshot("reset");
+    render(true);
+  }
+
+  function nextLotPreview(matKey) {
+    var p = MATERIALS[matKey].prefix;
+    return p + "-" + String(lotCounters[p] + 1).padStart(3, "0");
+  }
+  function nextSerial() {
+    tileCounter += 1;
+    return "TILE-" + String(tileCounter).padStart(4, "0");
+  }
+  function bumpLot(lotId) {
+    var parts = String(lotId).split("-");
+    if (parts.length < 2) return;
+    var n = parseInt(parts[1], 10);
+    if (!isNaN(n) && lotCounters[parts[0]] != null) lotCounters[parts[0]] = Math.max(lotCounters[parts[0]], n);
+  }
+
+  function openAdd(locId, btn) {
+    addTarget = locId;
+    var v = vesselOf(locId);
+    var pop = document.getElementById("addPop");
+    document.getElementById("popLoc").textContent = v.label;
+    var sel = document.getElementById("popMat");
+    sel.innerHTML = "";
+    v.inputs.forEach(function (k) {
+      var o = document.createElement("option");
+      o.value = k; o.textContent = MATERIALS[k].name;
+      sel.appendChild(o);
+    });
+    document.getElementById("popLot").value = nextLotPreview(v.inputs[0]);
+    document.getElementById("popUnspec").checked = false;
+    var r = btn.getBoundingClientRect();
+    pop.style.top = window.scrollY + r.bottom + 6 + "px";
+    pop.style.left = Math.min(window.scrollX + r.left, window.scrollX + window.innerWidth - 300) + "px";
+    pop.classList.add("on");
+  }
+
+  function buildCards() {
+    function card(v) {
+      var d = document.createElement("div");
+      d.className = "vessel";
+      d.id = "card-" + v.id;
+      d.innerHTML =
+        '<div class="v-head"><span class="v-name">' + esc(v.label) + '</span>' +
+        '<button class="btn ghost" type="button" data-down="' + v.id + '" style="min-height:36px;padding:4px 8px;font-size:11px;">Take down</button></div>' +
+        '<div class="v-status on" data-st></div>' +
+        '<div class="plc" data-plc></div>' +
+        '<div class="mix" data-mix></div>' +
+        '<div class="mass"><span data-massl></span><b data-massr></b></div>' +
+        '<ul class="map" data-map></ul>' +
+        '<div class="ops">' +
+          '<button class="btn icon" type="button" data-add="' + v.id + '" title="Add">+</button>' +
+          (v.kind === "tank"
+            ? '<select class="grow" id="dest-' + v.id + '"><option value="">flow to…</option><option value="' + LOC.TOWER_1 + '">TOWER-1</option><option value="' + LOC.TOWER_2 + '">TOWER-2</option></select>' +
+              '<input id="rate-' + v.id + '" type="number" min="0" step="0.5" value="3" style="width:72px;" title="kg/min">' +
+              '<button class="btn" type="button" data-flow="' + v.id + '">Start flow</button>'
+            : '<button class="btn primary" type="button" data-cast="' + v.id + '">Cast 8 kg</button>') +
+        "</div>";
+      return d;
+    }
+    var tankCol = document.getElementById("tankCol");
+    var towerCol = document.getElementById("towerCol");
+    tankCol.innerHTML = ""; towerCol.innerHTML = "";
+    TANK_IDS.forEach(function (id) { tankCol.appendChild(card(vesselOf(id))); });
+    TOWER_IDS.forEach(function (id) { towerCol.appendChild(card(vesselOf(id))); });
+    built = true;
+    if (!lineBound) {
+      document.querySelector(".line-grid").addEventListener("click", onLineClick);
+      lineBound = true;
+    }
+  }
+
+  function onLineClick(ev) {
+    var t = ev.target;
+    if (t.dataset.add) openAdd(t.dataset.add, t);
+    if (t.dataset.flow) startFlow(t.dataset.flow);
+    if (t.dataset.cast) doCast(t.dataset.cast, CAST_KG, nextSerial());
+    if (t.dataset.down) {
+      var loc = inventory.location(t.dataset.down);
+      setService(t.dataset.down, !loc.inService);
+    }
+  }
+
+  function renderLegend() {
+    var seen = {};
+    VESSELS.forEach(function (v) {
+      Object.keys(mes[v.id].lots).forEach(function (id) { seen[id] = true; });
+    });
+    tiles.forEach(function (tile) {
+      tile.lots.forEach(function (r) { seen[r.lotId] = true; });
+    });
+    var ids = Object.keys(seen);
+    document.getElementById("legend").innerHTML = ids.length
+      ? ids.map(function (id) {
+          return '<span><i class="swatch" style="background:' + lotColor(id) + '"></i>' + esc(id) + "</span>";
+        }).join("")
+      : '<span class="empty">Lots appear here once added.</span>';
+  }
+
+  function renderVessel(v) {
+    var loc = inventory.location(v.id);
+    var el = document.getElementById("card-" + v.id);
+    el.classList.toggle("down", !loc.inService);
+    el.querySelector("[data-st]").className = "v-status " + (loc.inService ? "on" : "off");
+    el.querySelector("[data-st]").textContent = loc.inService ? "IN SERVICE" : "TAKEN DOWN";
+    el.querySelector("[data-down]").textContent = loc.inService ? "Take down" : "Back online";
+    var plc = plcRead(v);
+    var bits = ["level " + fmt(plc.levelPct, 1) + "%", "level_kg " + fmt(plc.levelKg, 1)];
+    if (plc.outletLpm != null) bits.push("outlet_lpm " + fmt(plc.outletLpm, 2));
+    if (plc.inletLpm != null) bits.push("inlet_lpm " + fmt(plc.inletLpm, 2));
+    if (mes[v.id].estimated) bits.push("ESTIMATED");
+    el.querySelector("[data-plc]").textContent = bits.join(" · ");
+    var mix = el.querySelector("[data-mix]");
+    mix.innerHTML = "";
+    var total = mapTotal(v.id);
+    var keys = Object.keys(mes[v.id].lots);
+    if (!keys.length) {
+      mix.innerHTML = '<span style="flex:1;background:transparent;"></span>';
+    } else {
+      keys.forEach(function (id) {
+        var s = document.createElement("span");
+        var pct = total > 0 ? (mes[v.id].lots[id] / total) * 100 : 0;
+        s.style.width = pct + "%";
+        s.style.background = lotColor(id);
+        if (id.indexOf("UNATTRIBUTED") === 0) s.className = "hatch";
+        s.title = id + " " + fmt(mes[v.id].lots[id]) + " kg (" + fmt(pct, 1) + "%)";
+        mix.appendChild(s);
+      });
+    }
+    el.querySelector("[data-massl]").textContent = (mes[v.id].estimated ? "estimated · " : "") + "map " + fmt(total) + " kg";
+    el.querySelector("[data-massr]").textContent = fmt(loc.massKg) + " / " + loc.capacityKg + " kg";
+    var ul = el.querySelector("[data-map]");
+    ul.innerHTML = "";
+    if (!keys.length) {
+      ul.innerHTML = '<li class="empty">empty map</li>';
+    } else {
+      keys.sort(function (a, b) { return mes[v.id].lots[b] - mes[v.id].lots[a]; }).forEach(function (id) {
+        var li = document.createElement("li");
+        var un = id.indexOf("UNATTRIBUTED") === 0;
+        li.innerHTML = '<span class="id' + (un ? " unatt" : "") + '">' + esc(id) + '</span><span>' + fmt(mes[v.id].lots[id]) + " kg</span>";
+        ul.appendChild(li);
+      });
+    }
+    var dest = document.getElementById("dest-" + v.id);
+    var rate = document.getElementById("rate-" + v.id);
+    if (dest) {
+      dest.disabled = !loc.inService;
+      rate.disabled = !loc.inService;
+    }
+  }
+
+  function renderPipes() {
+    var svg = document.getElementById("flowSvg");
+    var xA = 20, xB = 20, x1 = 120, x2 = 120;
+    var yA = 40, yB = 160, y1 = 40, y2 = 160;
+    function path(x0, y0, x1_, y1_, active, dotted) {
+      var color = active ? "var(--sand)" : "var(--line-strong)";
+      var dash = active ? 'stroke-dasharray="6 5" class="flow-dash"' : (dotted ? 'stroke-dasharray="2 6"' : "");
+      var w = active ? 2.4 : 1.2;
+      return '<line x1="' + x0 + '" y1="' + y0 + '" x2="' + x1_ + '" y2="' + y1_ + '" stroke="' + color + '" stroke-width="' + w + '" ' + dash + "/>";
+    }
+    var parts = [];
+    var aDown = !inventory.location(LOC.TANK_A).inService;
+    var bDown = !inventory.location(LOC.TANK_B).inService;
+    var t1Down = !inventory.location(LOC.TOWER_1).inService;
+    var t2Down = !inventory.location(LOC.TOWER_2).inService;
+    parts.push(path(xA, yA, x1, y1, flows[LOC.TANK_A].to === LOC.TOWER_1, aDown || t1Down));
+    parts.push(path(xA, yA, x2, y2, flows[LOC.TANK_A].to === LOC.TOWER_2, aDown || t2Down));
+    parts.push(path(xB, yB, x1, y1, flows[LOC.TANK_B].to === LOC.TOWER_1, bDown || t1Down));
+    parts.push(path(xB, yB, x2, y2, flows[LOC.TANK_B].to === LOC.TOWER_2, bDown || t2Down));
+    TANK_IDS.forEach(function (id) {
+      var f = flows[id];
+      if (f.to && f.rate > 0) {
+        var y = id === LOC.TANK_A ? 90 : 130;
+        parts.push('<text x="70" y="' + y + '" fill="var(--sand)" font-size="10" text-anchor="middle" font-family="ui-monospace,monospace">' + f.rate + " kg/min</text>");
+      }
+    });
+    svg.innerHTML = parts.join("");
+    var tip = document.getElementById("sliceTip");
+    if (lastSlice) {
+      tip.classList.add("has");
+      tip.innerHTML = "<div>hover slice " + fmt(lastSlice.kg) + " kg</div>" +
+        lastSlice.lots.map(function (s) {
+          return "<div>" + esc(s.lotId) + " " + fmt(s.kg) + " kg</div>";
+        }).join("");
+    } else {
+      tip.classList.remove("has");
+    }
+  }
+
+  function renderTileDetail() {
+    var tile = null;
+    tiles.forEach(function (t) { if (t.serial === selectedSerial) tile = t; });
+    var box = document.getElementById("tileDetail");
+    if (!tile) {
+      box.innerHTML = '<div class="empty">Cast a tile, or pick one from the table. This panel is the genealogy report: every parent lot and its quantity.</div>';
+      return;
+    }
+    var lots = tile.lots.slice().sort(function (a, b) { return b.kg - a.kg; });
+    box.innerHTML =
+      '<div class="tile-serial">' + esc(tile.serial) + (tile.estimated ? " · estimated" : "") + "</div>" +
+      '<div class="tile-meta">' + esc(tile.tower) + " · " + fmt(tile.kg) + " kg · " + esc(tile.t) + "</div>" +
+      '<ul class="tile-lots">' +
+      lots.map(function (r) {
+        var pct = tile.kg > 0 ? (r.kg / tile.kg) * 100 : 0;
+        return "<li><span>" + esc(r.lotId) + "</span><span>" + fmt(r.kg) + " kg (" + fmt(pct, 1) + "%)</span></li>";
+      }).join("") + "</ul>";
+  }
+
+  function renderTables() {
+    document.getElementById("whBody").innerHTML = warehouse.map(function (r) {
+      return "<tr><td>" + esc(r.lotId) + "</td><td>" + fmt(r.received) + "</td><td>" + fmt(r.remaining) + "</td></tr>";
+    }).join("");
+
+    document.getElementById("mesTables").innerHTML = VESSELS.map(function (v) {
+      var rows = Object.keys(mes[v.id].lots).map(function (id) {
+        return "<tr><td>" + esc(id) + "</td><td>" + fmt(mes[v.id].lots[id]) + "</td></tr>";
+      }).join("") || '<tr><td colspan="2" class="empty">empty</td></tr>';
+      return "<div style='margin-bottom:10px'><div style='color:var(--subtle);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px'>" +
+        v.label + (mes[v.id].estimated ? " · estimated" : "") + "</div><table><thead><tr><th>lotId</th><th>kg</th></tr></thead><tbody>" + rows + "</tbody></table></div>";
+    }).join("");
+
+    document.getElementById("ledgerBody").innerHTML = ledger.slice().reverse().map(function (e) {
+      return '<tr><td>' + esc(e.t) + '</td><td class="kind-' + e.kind + '">' + esc(e.kind) + "</td><td>" + esc(e.detail) + "</td></tr>";
+    }).join("");
+
+    document.getElementById("snapBody").innerHTML = snapshots.slice().reverse().slice(0, 80).map(function (s) {
+      var txt = VESSELS.map(function (v) {
+        var m = s.maps[v.label];
+        var ks = Object.keys(m);
+        return v.label + ": " + (ks.length ? ks.map(function (k) { return k + "=" + fmt(m[k]); }).join(", ") : "empty");
+      }).join(" · ");
+      return "<tr><td>" + esc(s.t) + "</td><td>" + esc(s.reason) + "</td><td>" + esc(txt) + "</td></tr>";
+    }).join("");
+
+    var tbody = [];
+    tiles.slice().reverse().forEach(function (tile) {
+      if (!tile.lots.length) {
+        tbody.push('<tr class="click" data-serial="' + esc(tile.serial) + '"><td>' + esc(tile.serial) + "</td><td>" + esc(tile.tower) + "</td><td>" + esc(tile.t) + "</td><td>" + fmt(tile.kg) + "</td><td>—</td><td>—</td></tr>");
+      } else {
+        tile.lots.forEach(function (r, i) {
+          tbody.push('<tr class="click' + (tile.serial === selectedSerial ? " sel" : "") + '" data-serial="' + esc(tile.serial) + '"><td>' +
+            (i === 0 ? esc(tile.serial) : "") + "</td><td>" + (i === 0 ? esc(tile.tower) : "") + "</td><td>" +
+            (i === 0 ? esc(tile.t) : "") + "</td><td>" + (i === 0 ? fmt(tile.kg) : "") + "</td><td>" + esc(r.lotId) + "</td><td>" + fmt(r.kg) + "</td></tr>");
+        });
+      }
+    });
+    document.getElementById("tileBody").innerHTML = tbody.join("") || '<tr><td colspan="6" class="empty">No tiles yet.</td></tr>';
+
+    document.getElementById("gallery").innerHTML = tiles.slice().reverse().map(function (tile) {
+      return '<div class="tile-card' + (tile.serial === selectedSerial ? " sel" : "") + '" data-serial="' + esc(tile.serial) + '">' +
+        '<div class="tile-serial">' + esc(tile.serial) + "</div>" +
+        '<div class="tile-meta">' + esc(tile.tower) + " · " + fmt(tile.kg) + " kg</div>" +
+        tile.lots.map(function (r) { return '<div style="font-family:var(--mono);font-size:11px;display:flex;justify-content:space-between"><span>' + esc(r.lotId) + "</span><span>" + fmt(r.kg) + " kg</span></div>"; }).join("") +
+        "</div>";
+    }).join("");
+
+    var plcRows = ["level_pct", "level_kg", "outlet_lpm", "inlet_lpm"];
+    document.getElementById("plcBody").innerHTML = plcRows.map(function (tag) {
+      var cells = VESSELS.map(function (v) {
+        var p = plcRead(v);
+        if (tag === "level_pct") return fmt(p.levelPct, 1);
+        if (tag === "level_kg") return fmt(p.levelKg, 1);
+        if (tag === "outlet_lpm") return p.outletLpm == null ? "—" : fmt(p.outletLpm, 2);
+        if (tag === "inlet_lpm") return p.inletLpm == null ? "—" : fmt(p.inletLpm, 2);
+        return "—";
+      }).map(function (c) { return "<td>" + c + "</td>"; }).join("");
+      return "<tr><td>" + tag + "</td>" + cells + "</tr>";
+    }).join("");
+
+    var un = {};
+    VESSELS.forEach(function (v) {
+      Object.keys(mes[v.id].lots).forEach(function (id) {
+        if (id.indexOf("UNATTRIBUTED") === 0) un[id] = (un[id] || 0) + mes[v.id].lots[id];
+      });
+    });
+    tiles.forEach(function (tile) {
+      tile.lots.forEach(function (r) {
+        if (r.lotId.indexOf("UNATTRIBUTED") === 0) un[r.lotId] = un[r.lotId] || 0;
+      });
+    });
+    var unIds = Object.keys(un);
+    var late = document.getElementById("lateList");
+    if (!unIds.length) {
+      late.className = "empty";
+      late.textContent = "No unmatched adds. An unspecified add creates its own UNATTRIBUTED-n (do not pool).";
+    } else {
+      late.className = "";
+      late.innerHTML = unIds.map(function (id) {
+        return '<div class="ops" style="margin-bottom:6px;"><span style="font-family:var(--mono);min-width:140px">' + esc(id) +
+          " · " + fmt(un[id]) + ' kg still in maps</span><input data-attach-id="' + esc(id) + '" placeholder="lotId e.g. FIB-003" style="flex:1;min-width:100px;"><button class="btn" type="button" data-attach="' + esc(id) + '">scan-attach</button></div>';
+      }).join("");
+    }
+
+    var banner = document.getElementById("alertBanner");
+    if (alerts.length) {
+      banner.classList.add("on");
+      banner.textContent = alerts[alerts.length - 1].t + "  " + alerts[alerts.length - 1].msg;
+    } else banner.classList.remove("on");
+  }
+
+  function render(forceBuild) {
+    if (!built || forceBuild) buildCards();
+    VESSELS.forEach(renderVessel);
+    renderPipes();
+    renderLegend();
+    renderTileDetail();
+    renderTables();
+    document.getElementById("clock").textContent = clockStr(clock);
+    document.getElementById("flashBar").textContent = flashText;
+  }
+
+  function step(dt) {
+    clock += dt;
+    flowTick(dt);
+    if (example) {
+      while (example.i < example.steps.length && example.steps[example.i].t <= clock) {
+        example.steps[example.i].run();
+        example.i++;
+      }
+      if (example.i >= example.steps.length) example = null;
+    }
+    if (clock - lastSnapAt >= 30) snapshot("periodic");
+    render();
+  }
+
+  function timeToSec(h, m, s) { return (h - 8) * 3600 + m * 60 + s; }
+  function buildExample() {
+    return {
+      i: 0,
+      steps: [
+        { t: timeToSec(8, 0, 0), run: function () { doAdd(LOC.TANK_A, 40, "FIB-001", false); bumpLot("FIB-001"); } },
+        { t: timeToSec(8, 2, 0), run: function () { doAdd(LOC.TANK_A, 15, "ACE-001", false); bumpLot("ACE-001"); } },
+        { t: timeToSec(8, 4, 0), run: function () {
+          document.getElementById("dest-" + LOC.TANK_A).value = LOC.TOWER_1;
+          document.getElementById("rate-" + LOC.TANK_A).value = "3";
+          startFlow(LOC.TANK_A);
+          doAdd(LOC.TANK_B, 40, "FIB-002", false); bumpLot("FIB-002");
+        } },
+        { t: timeToSec(8, 6, 0), run: function () { doAdd(LOC.TANK_B, 15, "ACE-002", false); bumpLot("ACE-002"); } },
+        { t: timeToSec(8, 10, 0), run: function () { doAdd(LOC.TOWER_1, 2, "NI-001", false); bumpLot("NI-001"); } },
+        { t: timeToSec(8, 11, 0), run: function () { doAdd(LOC.TOWER_1, 5, "HP-001", false); bumpLot("HP-001"); } },
+        { t: timeToSec(8, 14, 0), run: function () {
+          stopFlow(LOC.TANK_A, false, "operator");
+          document.getElementById("dest-" + LOC.TANK_B).value = LOC.TOWER_2;
+          document.getElementById("rate-" + LOC.TANK_B).value = "3";
+          startFlow(LOC.TANK_B);
+        } },
+        { t: timeToSec(8, 18, 0), run: function () { doAdd(LOC.TOWER_2, 2, "NI-002", false); bumpLot("NI-002"); doAdd(LOC.TOWER_2, 5, "HP-002", false); bumpLot("HP-002"); } },
+        { t: timeToSec(8, 22, 0), run: function () { doCast(LOC.TOWER_1, CAST_KG, nextSerial()); } },
+        { t: timeToSec(8, 24, 0), run: function () { doCast(LOC.TOWER_2, CAST_KG, nextSerial()); } },
+      ],
+    };
+  }
+
+  document.getElementById("speed").oninput = function () {
+    document.getElementById("speedLbl").textContent = this.value + "×";
+  };
+  document.getElementById("playBtn").onclick = function () {
+    running = !running;
+    this.textContent = running ? "Pause" : "Play";
+    clearTimeout(tickHandle);
+    if (running) tick();
+  };
+  function tick() {
+    if (!running) return;
+    step(parseFloat(document.getElementById("speed").value));
+    tickHandle = setTimeout(tick, 250);
+  }
+  document.getElementById("stepBtn").onclick = function () { step(60); };
+  document.getElementById("resetBtn").onclick = function () {
+    running = false; clearTimeout(tickHandle); resetState();
+  };
+  document.getElementById("exampleBtn").onclick = function () {
+    running = false; clearTimeout(tickHandle); resetState();
+    example = buildExample();
+    writeLedger("add", "Loaded example operator script");
+    running = true;
+    document.getElementById("playBtn").textContent = "Pause";
+    tick();
+  };
+  document.getElementById("snapBtn").onclick = function () { snapshot("operator"); render(); };
+  document.getElementById("whReceive").onclick = function () {
+    var id = document.getElementById("whLot").value.trim();
+    var kg = parseFloat(document.getElementById("whKg").value);
+    if (!id || !(kg > 0)) return;
+    var row = whFind(id);
+    if (row) { row.received += kg; row.remaining += kg; }
+    else warehouse.push({ lotId: id, received: kg, remaining: kg });
+    bumpLot(id);
+    writeLedger("add", "warehouse receive " + id + " " + fmt(kg) + " kg");
+    hit(["whPanel", "ledgerPanel"], "RECEIVE → warehouse");
+    render();
+  };
+  document.getElementById("popMat").onchange = function () {
+    if (!document.getElementById("popUnspec").checked) document.getElementById("popLot").value = nextLotPreview(this.value);
+  };
+  document.getElementById("popUnspec").onchange = function () {
+    document.getElementById("popLot").disabled = this.checked;
+    if (this.checked) document.getElementById("popLot").value = "";
+  };
+  document.getElementById("popAdd").onclick = function () {
+    var qty = parseFloat(document.getElementById("popKg").value);
+    if (!(qty > 0) || !addTarget) return;
+    var un = document.getElementById("popUnspec").checked;
+    var lot = document.getElementById("popLot").value.trim();
+    if (lot) bumpLot(lot);
+    doAdd(addTarget, qty, lot, un);
+    document.getElementById("addPop").classList.remove("on");
+  };
+  document.getElementById("popCancel").onclick = function () {
+    document.getElementById("addPop").classList.remove("on");
+  };
+  document.getElementById("disagree").onchange = function () {
+    if (!this.checked) {
+      VESSELS.forEach(function (v) { mes[v.id].estimated = false; });
+      alerts = [];
+      document.getElementById("alertBanner").classList.remove("on");
+    }
+    render();
+  };
+  document.body.addEventListener("click", function (ev) {
+    var serial = ev.target.closest && ev.target.closest("[data-serial]");
+    if (serial) { selectedSerial = serial.getAttribute("data-serial"); render(); }
+    var att = ev.target.dataset && ev.target.dataset.attach;
+    if (att) {
+      var inp = document.querySelector('input[data-attach-id="' + att + '"]');
+      scanAttach(att, inp ? inp.value : "");
+    }
+  });
+
+  resetState();
+})();
+</script>
+</body>
+</html>
